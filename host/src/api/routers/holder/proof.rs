@@ -29,6 +29,7 @@ pub struct GenProofResponse {
 pub enum GetStatusResponse {
     Pending(PendingProofResponse),
     Ready(String),
+    Unknown,
     // TODO: Add status of Unknown tasks (not in Pending queue, and not in finished results)
 }
 
@@ -57,16 +58,12 @@ pub type AppState = Arc<Mutex<SharedData>>;
 pub struct SharedData {
     pub is_active: bool,
     pub next_id: usize,
-    pub current_task: usize,
+    pub current_task: Option<usize>,
+    // map taskID => task info
+    pub tasks: HashMap<usize, GenProofArgs>,
     // queue of pending 
-    pub pending: VecDeque<GenProofTask>,
+    pub pending: VecDeque<usize>,
     pub results: HashMap<usize, String>
-}
-
-#[derive(Clone)]
-pub struct GenProofTask {
-    id: usize,
-    params: GenProofArgs,
 }
 
 
@@ -74,7 +71,8 @@ pub fn proof_router() -> Router {
     let state = Arc::new(Mutex::new(SharedData {
             is_active: false,
             next_id: 0,
-            current_task: 0, // start value does not matter, because of how we re-assign the variable each time
+            current_task: Option::None,
+            tasks: HashMap::new(),
             pending: VecDeque::new(),
             results: HashMap::new(),
         }));
@@ -91,56 +89,72 @@ async fn genproof_handler(
 ) -> (StatusCode, Json<GenProofResponse>) {
     // Insert the request into the pending queue
     let (was_active, task_id, active_task) = {
+        // MUTEX ACQUIRED
         let mut state = app_state.lock().expect("mutex was poisoned");
         // the ID to be assigned to this task
-        let next_id = state.next_id;
+        let task_id = state.next_id;
+        state.next_id += 1;
         // are we currently generating some other proof?
         let was_active = state.is_active;
-        // if yes, what's the task ID associated with it
-        let active_task_id = state.current_task;
-        state.pending.push_front(GenProofTask { id: next_id, params: payload });
-        state.next_id += 1;
+        state.tasks.insert(task_id, payload);
+        state.pending.push_front(task_id);
         state.is_active = true;
         (
             was_active,
-            next_id,
-            if was_active { active_task_id } else { next_id }
+            task_id,
+            if was_active { state.current_task.unwrap() } else { task_id }
         )
+
+        // MUTEX RELEASED
     };
 
     // start proof generation
     if !was_active {
         tokio::spawn(async move {
+            println!("Starting a new thread...");
+
             loop {
                 // get a task from the pending queue
-                let maybe_task = {
+                let maybe_task_info: Option<(usize, GenProofArgs)> = {
+                    // MUTEX ACQUIRED
                     let mut state = app_state.lock().expect("mutex was poisoned");
-                    let maybe_task = state.pending.pop_back();
-                    let maybe_task_copy = maybe_task.clone();
-                    // update ID of currently active task
-                    match maybe_task {
-                        Some(task) => {
-                            state.is_active = true;
-                            state.current_task = task.id;
+                    match state.pending.pop_back() {
+                        Some(task_id) => {
+                            match state.tasks.get(&task_id).cloned() {
+                                Some(task_info) => {
+                                    // update ID of currently active task
+                                    state.is_active = true;
+                                    state.current_task = Some(task_id);
+                                    // return task ID and info
+                                    Option::Some((task_id, task_info))
+                                },
+                                None => {
+                                    state.is_active = false;
+                                    Option::None
+                                },
+                            }
                         },
-                        None => { state.is_active = false; }
+                        None => {
+                            state.is_active = false;
+                            Option::None
+                        },
                     }
 
-                    maybe_task_copy
+                    // MUTEX RELEASED
                 };
 
                 // No tasks remaining
-                if maybe_task.is_none() { break; }
+                if maybe_task_info.is_none() { break; }
 
                 // We have a task
-                let task = maybe_task.unwrap();
+                let (task_id, task_info) = maybe_task_info.unwrap();
 
                 // First, we construct an executor environment
                 let env = ExecutorEnv::builder()
                     .add_input(&to_vec(&ZkvmInput {
-                        credentials: task.params.credentials,
-                        lang: task.params.lang,
-                        script: task.params.script,
+                        credentials: task_info.credentials,
+                        lang: task_info.lang,
+                        script: task_info.script,
                     }).unwrap())
                     .build()
                     .unwrap();
@@ -170,11 +184,14 @@ async fn genproof_handler(
 
                 // save the proof as a task result
                 {
+                    // MUTEX ACQUIRED
                     let mut state = app_state.lock().expect("mutex was poisoned");
                     state.results.insert(
-                        task.id,
+                        task_id,
                         Base64::encode_string(&bincode::serialize(&receipt).unwrap())
                     );
+
+                    // MUTEX RELEASED
                 }
             }
         });
@@ -187,14 +204,35 @@ async fn genproof_handler(
 }
 
 pub async fn status_handler(State(app_state): State<AppState>, Path(task_id): Path<usize>) -> (StatusCode, Json<GetStatusResponse>) {
-    let (raw_result, current_task) = {
+    let (raw_result, current_task, is_pending) = {
+        // MUTEX ACQUIRED
         let state = app_state.lock().expect("mutex was poisoned");
         let raw_result: Option<String> = state.results.get(&task_id).cloned();
-        (raw_result, state.current_task)
+        let is_pending = if state.pending.contains(&task_id) {
+            true
+        } else {
+            match state.current_task {
+                Some(current_task_id) => task_id == current_task_id,
+                None => false,
+            }
+        };
+
+        (raw_result, state.current_task, is_pending)
+
+        // MUTEX RELEASED
     };
     let response = match raw_result {
         Some(proof) => GetStatusResponse::Ready(proof),
-        _ => GetStatusResponse::Pending(PendingProofResponse { current_task, time_estimate_minutes: (task_id - current_task) * 2 })
+        _ => {
+            if is_pending {
+                // We unwrap() cause it shouldn't be possible to is_pending == true, but no active task
+                let current_task_id = current_task.unwrap();
+                GetStatusResponse::Pending(PendingProofResponse { current_task: current_task_id, time_estimate_minutes: (task_id - current_task_id) * 2 })   
+            }
+            else {
+                GetStatusResponse::Unknown
+            }
+        },
     };
     (StatusCode::ACCEPTED, Json(response))
 }
