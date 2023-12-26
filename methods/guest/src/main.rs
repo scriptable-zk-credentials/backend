@@ -28,12 +28,9 @@ pub fn main() {
     // validate that credentials are JSON objects
     for cred in credentials.iter() {
         let a = from_str::<Value>(cred);
-        if a.is_err() { has_error = true; break; }
-        else {
-            match a.unwrap() {
-                Value::Object(_) => (),
-                _ => { has_error = true; break; }
-            }   
+        match a {
+            Ok(Value::Object(_)) => (),
+            _ => { has_error = true; break; },
         }
     }
 
