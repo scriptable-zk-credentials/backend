@@ -1,8 +1,8 @@
 use methods::{ZK_PROVER_ELF, ZK_PROVER_ID};
 use shared::types::{ZkCommit, ZkvmInput, ScriptLang};
 use risc0_zkvm::{
-    Executor, ExecutorEnv,
-    serde::{to_vec, from_slice},
+    ExecutorEnv, default_prover,
+    serde::to_vec,
 };
 use std::{
     time::Instant,
@@ -151,30 +151,30 @@ async fn genproof_handler(
 
                 // First, we construct an executor environment
                 let env = ExecutorEnv::builder()
-                    .add_input(&to_vec(&ZkvmInput {
+                    .write(&ZkvmInput {
                         credentials: task_info.credentials,
                         lang: task_info.lang,
                         script: task_info.script,
-                    }).unwrap())
+                    })
+                    .unwrap()
                     .build()
                     .unwrap();
 
-                // Next, we make an executor, loading the (renamed) ELF binary.
-                let mut exec = Executor::from_elf(env, ZK_PROVER_ELF).unwrap();
-
-                // Run the executor to produce a session.
-                let session = exec.run().unwrap();
+                // Obtain the local prover.
+                let prover = default_prover();
 
                 let start_time_prover = Instant::now();
 
-                // Prove the session to produce a receipt.
-                let receipt = session.prove().unwrap();
+                // Produce a receipt by proving the specified ELF binary.
+                let receipt = prover
+                    .prove_elf(env, ZK_PROVER_ELF)
+                    .unwrap();
 
                 println!("Prover duration {:?}", start_time_prover.elapsed());
                 println!("Receipt size {:.2} (KB)", (to_vec(&receipt).unwrap().len() / 1024));
 
                 // Get guest result
-                let code_result: ZkCommit = from_slice(&receipt.journal).unwrap();
+                let code_result: ZkCommit = receipt.journal.decode().unwrap();
                 println!("Result: {:?}", to_string(&code_result));
 
                 // Verify receipt to confirm that recipients will also be able to verify it

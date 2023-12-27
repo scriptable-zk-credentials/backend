@@ -40,7 +40,7 @@ async fn check_zkp(Json(payload): Json<CheckZkpArgs>) -> (StatusCode, Json<Check
     let receipt: Receipt = bincode::deserialize(&Base64::decode_vec(&payload.base64_receipt).unwrap()).unwrap();
     let (verdict, error, journal) = match receipt.verify(ZK_PROVER_ID) {
         Ok(()) => {
-            let journal: ZkCommit = from_slice(&receipt.journal).unwrap();
+            let journal: ZkCommit = from_slice(&receipt.journal.bytes).unwrap();
             (true, Option::None, Option::Some(journal))
         },
         Err(error) => (false, Option::Some(error.to_string()), Option::None),
