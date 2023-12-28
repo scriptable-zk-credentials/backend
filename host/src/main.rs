@@ -15,7 +15,7 @@ async fn main() {
     dotenv().ok();
 
     // start DB
-    db_start().await;
+    let db_conn = db_start().await;
     // start API
-    api_start().await;
+    api_start(db_conn).await;
 }
