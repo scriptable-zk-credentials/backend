@@ -3,7 +3,7 @@ use migration::{Migrator, MigratorTrait};
 
 
 pub async fn db_start() -> DbConn {
-    let db = Database::connect("sqlite://credentials.sqlite?mode=rwc").await
+    let db = Database::connect("sqlite://db.sqlite?mode=rwc").await
         .expect("failed to connect to create DB connection");
     assert!(db.ping().await.is_ok());
     

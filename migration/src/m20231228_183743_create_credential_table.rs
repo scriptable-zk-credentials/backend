@@ -24,7 +24,8 @@ impl MigrationTrait for Migration {
                         ForeignKey::create()
                             .name("fk-credential-holder_id")
                             .from(Credential::Table, Credential::HolderId)
-                            .to(Holder::Table, Holder::Id),
+                            .to(Holder::Table, Holder::Id)
+                            .on_delete(ForeignKeyAction::Cascade),
                     )
                     .col(ColumnDef::new(Credential::Details).json().not_null())
                     .to_owned(),

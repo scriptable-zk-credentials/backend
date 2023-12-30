@@ -21,7 +21,7 @@ pub enum Relation {
         from = "Column::HolderId",
         to = "super::holder::Column::Id",
         on_update = "NoAction",
-        on_delete = "NoAction"
+        on_delete = "Cascade"
     )]
     Holder,
 }
