@@ -51,15 +51,6 @@ pub async fn modify_credentials(
     State(state): State<AppState>,
     Json(payload): Json<ModifyCredentialsArgs>,
 ) -> (StatusCode, Json<bool>) {
-    let new_credentials: Vec<credential::ActiveModel> = payload.add
-        .iter()
-        .map(|credential_info| credential::ActiveModel {
-            holder_id: Set(credential_info.holder_id.clone()),
-            details: Set(credential_info.details.clone()),
-            ..Default::default()
-        })
-        .collect();
-
     // Remove credentials
     if !payload.remove.is_empty() {
         credential::Entity::delete_many()
@@ -68,7 +59,17 @@ pub async fn modify_credentials(
             .await.expect("failed to remove credentials from DB");
     }
     // Add credentials
-    if !new_credentials.is_empty() {
+    if !payload.add.is_empty() {
+        // create new credential objects
+        let new_credentials: Vec<credential::ActiveModel> = payload.add
+        .iter()
+        .map(|credential_info| credential::ActiveModel {
+            holder_id: Set(credential_info.holder_id.clone()),
+            details: Set(credential_info.details.clone()),
+            ..Default::default()
+        })
+        .collect();
+        // insert new credentials in DB
         credential::Entity::insert_many(new_credentials)
             .exec(&state.db_connection)
             .await.expect("failed to insert new credentials in DB");

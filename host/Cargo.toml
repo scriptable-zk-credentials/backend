@@ -21,3 +21,5 @@ dotenv = "0.10.0"
 async-openai = "0.14.2"
 sea-orm = { version = "0.12.10", features = ["sqlx-sqlite", "runtime-tokio-native-tls", "macros"]}
 env_logger = "0.10.1"
+sha2 = "0.10.8"
+rand = "0.8.5"

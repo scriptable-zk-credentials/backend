@@ -28,6 +28,7 @@ impl MigrationTrait for Migration {
                             .on_delete(ForeignKeyAction::Cascade),
                     )
                     .col(ColumnDef::new(CredentialInstance::Data).text().not_null())
+                    .col(ColumnDef::new(CredentialInstance::Hash).text().not_null())
                     .to_owned(),
             )
             .await
@@ -46,4 +47,5 @@ enum CredentialInstance {
     Id,
     CredentialId,
     Data,
+    Hash,
 }
