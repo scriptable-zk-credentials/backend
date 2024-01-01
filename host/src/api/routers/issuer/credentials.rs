@@ -10,14 +10,11 @@ use serde::{Serialize, Deserialize};
 
 #[derive(Deserialize)]
 pub struct ModifyCredentialsArgs {
-    pub remove: Vec<i32>,
-    pub add: Vec<CredentialInfo>,
-}
-
-#[derive(Deserialize)]
-pub struct CredentialInfo {
     pub holder_id: i32,
-    pub details: String,
+    // vector of credential IDs to be removed for this user
+    pub remove: Vec<i32>,
+    // vector of credential details (JSON strings) to be added for this user
+    pub add: Vec<String>,
 }
 
 #[derive(Clone)]
@@ -49,23 +46,39 @@ pub async fn get_credentials(
 
 pub async fn modify_credentials(
     State(state): State<AppState>,
-    Json(payload): Json<ModifyCredentialsArgs>,
+    Json(payload): Json<Vec<ModifyCredentialsArgs>>,
 ) -> (StatusCode, Json<bool>) {
+    // group all credentials to be removed into: Vec<credential_id>
+    let to_remove: Vec<i32> = payload
+        .iter()
+        .map(|ModifyCredentialsArgs { remove, .. }| remove)
+        .flatten()
+        .copied()
+        .collect();
+    // group all credentials to be added into: Vec<(holder_id, credential_details)>
+    let to_add: Vec<(i32, String)> = payload
+        .iter()
+        .map(|ModifyCredentialsArgs { holder_id, add, .. }| {
+            add.iter().map(|cred_details| (holder_id.clone(), cred_details.clone()))
+        })
+        .flatten()
+        .collect();
+
     // Remove credentials
-    if !payload.remove.is_empty() {
+    if !to_remove.is_empty() {
         credential::Entity::delete_many()
-            .filter(credential::Column::Id.is_in(payload.remove))
+            .filter(credential::Column::Id.is_in(to_remove))
             .exec(&state.db_connection)
             .await.expect("failed to remove credentials from DB");
     }
     // Add credentials
-    if !payload.add.is_empty() {
+    if !to_add.is_empty() {
         // create new credential objects
-        let new_credentials: Vec<credential::ActiveModel> = payload.add
+        let new_credentials: Vec<credential::ActiveModel> = to_add
         .iter()
-        .map(|credential_info| credential::ActiveModel {
-            holder_id: Set(credential_info.holder_id.clone()),
-            details: Set(credential_info.details.clone()),
+        .map(|(holder_id, credential_details)| credential::ActiveModel {
+            holder_id: Set(holder_id.clone()),
+            details: Set(credential_details.clone()),
             ..Default::default()
         })
         .collect();
