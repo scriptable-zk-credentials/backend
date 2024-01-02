@@ -5,5 +5,6 @@
         "./shared/Cargo.toml",
         "./migration/Cargo.toml",
         "./entity/Cargo.toml",
+        "contract/Cargo.toml",
     ]
 }
