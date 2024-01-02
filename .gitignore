@@ -6,5 +6,8 @@ target/
 # Credentials
 .env
 
+# NEAR dev-deploy files
+neardev/
+
 # Database
 db.sqlite
