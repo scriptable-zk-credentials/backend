@@ -4,6 +4,7 @@ use near_sdk::{
     BorshStorageKey, AccountId, env,
     near_bindgen, CryptoHash, assert_one_yocto, require,
 };
+use shared::types::SchemaId;
 
 
 #[derive(BorshStorageKey, BorshSerialize)]
@@ -40,11 +41,11 @@ impl Contract {
     /// Returns SchemaId of the added schema (which is also its index in the vector)
     /// CAUTION!! Schemas are add-only
     #[payable]
-    pub fn add_schema(&mut self, schema: String) -> u32 {
+    pub fn add_schema(&mut self, schema: String) -> SchemaId {
         assert_one_yocto();
 
         let issuer = env::predecessor_account_id();
-        let result: u32 = match self.schemas.get_mut(&issuer) {
+        let result: SchemaId = match self.schemas.get_mut(&issuer) {
             // Issuer has schemas registered before 
             Some(existing_schemas) => {
                 // Add the new schema

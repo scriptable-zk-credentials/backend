@@ -11,7 +11,7 @@ use shared::types::ZkCommit;
 
 #[derive(Deserialize)]
 pub struct ModifyHoldersArgs {
-    pub remove: Vec<i32>,
+    pub remove: Vec<u32>,
     pub add: Vec<HolderInfo>,
 }
 

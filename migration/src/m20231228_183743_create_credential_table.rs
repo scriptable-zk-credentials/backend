@@ -14,12 +14,12 @@ impl MigrationTrait for Migration {
                     .if_not_exists()
                     .col(
                         ColumnDef::new(Credential::Id)
-                            .integer()
+                            .unsigned()
                             .not_null()
                             .auto_increment()
                             .primary_key(),
                     )
-                    .col(ColumnDef::new(Credential::HolderId).integer().not_null())
+                    .col(ColumnDef::new(Credential::HolderId).unsigned().not_null())
                     .foreign_key(
                         ForeignKey::create()
                             .name("fk-credential-holder_id")
@@ -27,6 +27,7 @@ impl MigrationTrait for Migration {
                             .to(Holder::Table, Holder::Id)
                             .on_delete(ForeignKeyAction::Cascade),
                     )
+                    .col(ColumnDef::new(Credential::SchemaId).unsigned().not_null())
                     .col(ColumnDef::new(Credential::Details).json().not_null())
                     .to_owned(),
             )
@@ -45,5 +46,6 @@ pub enum Credential {
     Table,
     Id,
     HolderId,
+    SchemaId,
     Details,
 }

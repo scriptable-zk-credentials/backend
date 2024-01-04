@@ -7,8 +7,8 @@ use serde::{Serialize, Deserialize};
 #[sea_orm(table_name = "credential_instance")]
 pub struct Model {
     #[sea_orm(primary_key)]
-    pub id: i32,
-    pub credential_id: i32,
+    pub id: u32,
+    pub credential_id: u32,
     pub data: String,
     pub hash: String
 }

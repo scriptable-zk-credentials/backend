@@ -13,7 +13,7 @@ use serde_json::{to_string, from_str, Value};
 
 #[derive(Deserialize)]
 pub struct ModifyInstancesArgs {
-    pub remove: Vec<i32>,
+    pub remove: Vec<u32>,
     pub num_to_add: usize,
 }
 
@@ -36,7 +36,7 @@ pub fn instances_router(db_connection: DbConn) -> Router {
 #[axum::debug_handler]
 pub async fn get_instances(
     State(state): State<AppState>,
-    Path(credential_id): Path<i32>,
+    Path(credential_id): Path<u32>,
 ) -> (StatusCode, Json<Vec<credential_instance::Model>>) {
     let instances = credential_instance::Entity::find()
         .filter(credential_instance::Column::CredentialId.eq(credential_id))
@@ -48,7 +48,7 @@ pub async fn get_instances(
 
 pub async fn modify_instances(
     State(state): State<AppState>,
-    Path(credential_id): Path<i32>,
+    Path(credential_id): Path<u32>,
     Json(payload): Json<ModifyInstancesArgs>,
 ) -> (StatusCode, Json<bool>) {
     // Remove credential instances
@@ -87,6 +87,9 @@ pub async fn modify_instances(
                                 // shorter representation => faster parsing inside zkVM
                                 Value::from(Base64::encode_string(&rand::random::<u128>().to_ne_bytes()))
                             );
+                            // add SchemaId
+                            shared_details.insert("schema_id".to_string(), credential.schema_id.into());
+                            // obtain a stringified JSON representation of the credential instance
                             let details_str = to_string(&shared_details).unwrap();
                             new_instances.push(credential_instance::ActiveModel {
                                 credential_id: Set(credential_id),

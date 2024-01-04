@@ -14,12 +14,12 @@ impl MigrationTrait for Migration {
                     .if_not_exists()
                     .col(
                         ColumnDef::new(CredentialInstance::Id)
-                            .integer()
+                            .unsigned()
                             .not_null()
                             .auto_increment()
                             .primary_key(),
                     )
-                    .col(ColumnDef::new(CredentialInstance::CredentialId).integer().not_null())
+                    .col(ColumnDef::new(CredentialInstance::CredentialId).unsigned().not_null())
                     .foreign_key(
                         ForeignKey::create()
                             .name("fk-credential_instance-credential_id")
