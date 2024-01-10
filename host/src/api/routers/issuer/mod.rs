@@ -20,7 +20,7 @@ use risc0_zkvm::{
     serde::from_slice,
 };
 use serde::{Serialize, Deserialize};
-use shared::{types::ZkCommit};
+use shared::types::ZkCommit;
 use base64ct::{Base64, Encoding};
 
 use crate::adapters::RegistryContract;
@@ -46,8 +46,8 @@ pub fn issuer_router(db_connection: DbConn, registry: Arc<RegistryContract>) -> 
         .route("/check-zkp", post(check_zkp))
         .nest("/schemas", schemas_router(Arc::clone(&registry)))
         .nest("/holders", holders_router(db_connection.clone()))
-        .nest("/credentials", credentials_router(db_connection.clone(), Arc::clone(&registry)))
-        .nest("/instances", instances_router(db_connection.clone()))
+        .nest("/credentials", credentials_router(db_connection.clone()))
+        .nest("/instances", instances_router(db_connection.clone(), Arc::clone(&registry)))
 }
 
 

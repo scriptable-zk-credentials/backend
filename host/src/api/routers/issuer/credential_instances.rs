@@ -1,7 +1,8 @@
+use std::{sync::Arc, collections::HashSet};
 use entity::{credential, credential_instance};
-use sea_orm::{DbConn, EntityTrait, Set, QueryFilter, ColumnTrait, Condition};
+use sea_orm::{DbConn, EntityTrait, Set, QueryFilter, ColumnTrait, Condition, QuerySelect, FromQueryResult};
 use axum::{
-    routing::{Router, get},
+    routing::{Router, get, post},
     http::StatusCode, Json,
     extract::{State, Path},
 };
@@ -10,6 +11,8 @@ use base64ct::{Base64, Encoding};
 use serde::Deserialize;
 use serde_json::{to_string, from_str, Value};
 
+use crate::adapters::RegistryContract;
+
 
 #[derive(Deserialize)]
 pub struct ModifyInstancesArgs {
@@ -17,19 +20,26 @@ pub struct ModifyInstancesArgs {
     pub num_to_add: usize,
 }
 
+#[derive(FromQueryResult)]
+struct InstanceHash {
+    hash: String,
+}
+
 #[derive(Clone)]
 pub struct AppState {
     db_connection: DbConn,
+    registry: Arc<RegistryContract>,
 }
 
-pub fn instances_router(db_connection: DbConn) -> Router {
-    let state = AppState { db_connection, };
+pub fn instances_router(db_connection: DbConn, registry: Arc<RegistryContract>) -> Router {
+    let state = AppState { db_connection, registry, };
     
     Router::new()
         .route(
             "/:credential_id",
             get(get_instances).post(modify_instances)
         )
+        .route("/sync", post(sync_instances))
         .with_state(state)
 }
 
@@ -109,6 +119,30 @@ pub async fn modify_instances(
             None => {},
         }
     }
+
+    (StatusCode::ACCEPTED, Json(true))
+}
+
+// sync credential hashes on the registry contract to reflect the state of the issuer DB
+pub async fn sync_instances(State(state): State<AppState>) -> (StatusCode, Json<bool>) {
+    // get all credential hashes on the DB
+    let db_hashes: HashSet<String> = credential_instance::Entity::find()
+        .select_only()
+        .column(credential_instance::Column::Hash)
+        .into_model::<InstanceHash>()
+        .all(&state.db_connection)
+        .await
+        .unwrap()
+        .into_iter()
+        .map(|q_result| q_result.hash)
+        .collect();
+    // get all credentials hashes on the registry contract
+    let registry_hashes: HashSet<String> = state.registry.get_credentials().await.into_iter().collect();
+
+    state.registry.modify_credentials(
+        registry_hashes.difference(&db_hashes).into_iter().cloned().collect(),
+        db_hashes.difference(&registry_hashes).into_iter().cloned().collect(),
+    ).await;
 
     (StatusCode::ACCEPTED, Json(true))
 }
