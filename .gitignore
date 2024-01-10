@@ -5,6 +5,7 @@ target/
 
 # Credentials
 .env
+near-credentials/
 
 # NEAR dev-deploy files
 neardev/

@@ -1,13 +1,13 @@
 use entity::{credential, credential_instance};
-use sea_orm::{DbConn, EntityTrait, ActiveModelTrait, Set, QueryFilter, ColumnTrait, Condition};
+use sea_orm::{DbConn, EntityTrait, Set, QueryFilter, ColumnTrait, Condition};
 use axum::{
-    routing::{Router, post, get},
+    routing::{Router, get},
     http::StatusCode, Json,
     extract::{State, Path},
 };
 use sha2::{Sha256, Digest};
 use base64ct::{Base64, Encoding};
-use serde::{Serialize, Deserialize};
+use serde::Deserialize;
 use serde_json::{to_string, from_str, Value};
 
 

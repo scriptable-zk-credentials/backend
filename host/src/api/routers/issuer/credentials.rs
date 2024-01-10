@@ -1,12 +1,15 @@
+use std::sync::Arc;
 use entity::credential;
-use sea_orm::{DbConn, EntityTrait, ActiveModelTrait, Set, QueryFilter, ColumnTrait};
+use sea_orm::{DbConn, EntityTrait, Set, QueryFilter, ColumnTrait};
 use axum::{
     routing::{Router, post, get},
     http::StatusCode, Json,
     extract::{State, Path},
 };
-use serde::{Serialize, Deserialize};
+use serde::Deserialize;
 use shared::types::SchemaId;
+
+use crate::adapters::RegistryContract;
 
 
 #[derive(Deserialize)]
@@ -21,10 +24,11 @@ pub struct ModifyCredentialsArgs {
 #[derive(Clone)]
 pub struct AppState {
     db_connection: DbConn,
+    registry: Arc<RegistryContract>,
 }
 
-pub fn credentials_router(db_connection: DbConn) -> Router {
-    let state = AppState { db_connection, };
+pub fn credentials_router(db_connection: DbConn, registry: Arc<RegistryContract>) -> Router {
+    let state = AppState { db_connection, registry, };
     
     Router::new()
         .route("/", post(modify_credentials))

@@ -1,12 +1,11 @@
 use entity::holder;
-use sea_orm::{DbConn, EntityTrait, ActiveModelTrait, Set, QueryFilter, ColumnTrait};
+use sea_orm::{DbConn, EntityTrait, Set, QueryFilter, ColumnTrait};
 use axum::{
-    routing::{Router, post, get},
+    routing::{Router, get},
     http::StatusCode, Json,
-    extract::{State, Path},
+    extract::State,
 };
-use serde::{Serialize, Deserialize};
-use shared::types::ZkCommit;
+use serde::Deserialize;
 
 
 #[derive(Deserialize)]

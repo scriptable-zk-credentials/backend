@@ -7,6 +7,9 @@ members = [
     "migration",
     "entity",
 ]
+default-members = [
+    "host"
+]
 exclude = [
     "contract"
 ]
