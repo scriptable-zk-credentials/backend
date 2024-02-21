@@ -26,12 +26,24 @@ impl RegistryContract {
         self.wallet.signer_account_id()
     }
 
-    pub async fn get_schemas(&self) -> Vec<String> {
+    pub async fn get_issuer_schemas(&self) -> Vec<String> {
+        let result: Vec<String> = self.wallet.view(
+            &self.contract_address,
+            "get_issuer_schemas",
+            json!({
+                "issuer": self.get_issuer_id(),
+            })
+        ).await.unwrap();
+
+        result
+    }
+
+    pub async fn get_schemas(&self, pairs: Vec<(String, u32)>) -> Vec<String> {
         let result: Vec<String> = self.wallet.view(
             &self.contract_address,
             "get_schemas",
             json!({
-                "issuer": self.get_issuer_id()
+                "pairs": pairs,
             })
         ).await.unwrap();
 
@@ -64,12 +76,12 @@ impl RegistryContract {
         result
     }
 
-    pub async fn has_credential(&self, credential_hash: String) -> bool {
-        let result: bool = self.wallet.view(
+    pub async fn check_credentials(&self, pairs: Vec<(String, String)>) -> Vec<bool> {
+        let result: Vec<bool> = self.wallet.view(
             &self.contract_address,
-            "has_credential",
+            "check_credentials",
             json!({
-                "issuer": self.get_issuer_id()
+                "pairs": pairs,
             })
         ).await.unwrap();
 

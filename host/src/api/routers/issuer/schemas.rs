@@ -34,7 +34,7 @@ pub fn schemas_router(registry: Arc<RegistryContract>) -> Router {
 pub async fn get_schemas(
     State(state): State<AppState>,
 ) -> (StatusCode, Json<Vec<String>>) {
-    let holders = state.registry.get_schemas().await;
+    let holders = state.registry.get_issuer_schemas().await;
     
     (StatusCode::ACCEPTED, Json(holders))
 }

@@ -7,6 +7,7 @@ use routers::{
     hello::hello_router,
     holder::holder_router,
     issuer::issuer_router,
+    verifier::verifier_router,
 };
 use sea_orm::DbConn;
 
@@ -18,7 +19,8 @@ pub async fn api_start(db_connection: DbConn, registry: RegistryContract) {
     let api_routes = Router::new()
         .nest("/hello", hello_router())
         .nest("/holder", holder_router())
-        .nest("/issuer", issuer_router(db_connection, Arc::clone(&clonabe_registry)));
+        .nest("/issuer", issuer_router(db_connection.clone(), Arc::clone(&clonabe_registry)))
+        .nest("/verifier", verifier_router(db_connection.clone(), Arc::clone(&clonabe_registry)));
 
     let addr = SocketAddr::from((
         IpAddr::V4(Ipv4Addr::LOCALHOST),

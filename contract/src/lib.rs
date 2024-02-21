@@ -100,7 +100,7 @@ impl Contract {
     }
 
     /// Supports pagination using from and limit
-    pub fn get_schemas(&self, issuer: AccountId, from: Option<u32>, limit: Option<u32>) -> Vec<String> {
+    pub fn get_issuer_schemas(&self, issuer: AccountId, from: Option<u32>, limit: Option<u32>) -> Vec<String> {
         let maybe_schemas = self.schemas.get(&issuer);
         let result: Vec<String> = match maybe_schemas {
             None => Vec::new(),
@@ -157,12 +157,43 @@ impl Contract {
         result
     }
 
-    pub fn has_credential(&self, issuer: AccountId, credential_hash: String) -> bool {
-        let result = match self.credentials.get(&issuer) {
-            None => false,
-            Some(credentials) => credentials.contains(&credential_hash),
-        };
+    /// Batch get schemas from different issuers.
+    /// Accepts a vector of (issuer, schema_id) pairs.
+    /// Returns a vector containing each schema. Each non-valid (issuer, schema_id) pair returns empty string ("").
+    pub fn get_schemas(&self, pairs: Vec<(AccountId, u32)>) -> Vec<String> {
+        pairs
+            .iter()
+            .map(|(issuer, schema_id)| {
+                let maybe_schemas = self.schemas.get(issuer);
+                let result: String = match maybe_schemas {
+                    None => "".to_string(),
+                    Some(all_schemas) => {
+                        match all_schemas.get(*schema_id) {
+                            Option::None => "".to_string(),
+                            Option::Some(schema) => schema.clone(),
+                        }
+                    },
+                };
 
-        result
+                result
+            })
+            .collect()
+    }
+
+    /// Batch check the validity of credentials.
+    /// Accepts a vector of (issuer, credential hash) pairs.
+    /// Returns a vector containing the result of each check.
+    pub fn check_credentials(&self, pairs: Vec<(AccountId, String)>) -> Vec<bool> {
+        let results: Vec<bool> = pairs.
+            iter()
+            .map(|(issuer, credential_hash)| {
+                match self.credentials.get(issuer) {
+                    None => false,
+                    Some(credentials) => credentials.contains(credential_hash),
+                }
+            })
+            .collect();
+
+        results
     }
 }
