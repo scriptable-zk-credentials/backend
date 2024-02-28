@@ -30,7 +30,6 @@ pub enum GetStatusResponse {
     Pending(PendingProofResponse),
     Ready(String),
     Unknown,
-    // TODO: Add status of Unknown tasks (not in Pending queue, and not in finished results)
 }
 
 #[derive(Serialize, Clone)]

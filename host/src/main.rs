@@ -18,7 +18,7 @@ async fn main() {
 
     Interpreter::without_stdlib(Default::default()).enter(|vm| {
         let scope = vm.new_scope_with_builtins();
-        let source = r#"return 1 == 1"#;
+        let source = r#"1 == 1"#;
         let code_obj = vm
             .compile(source, compiler::Mode::Exec, "<embedded>".to_owned())
             .map_err(|err| vm.new_syntax_error(&err, Some(source))).unwrap();

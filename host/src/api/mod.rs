@@ -1,7 +1,8 @@
 mod routers;
 
 use std::sync::Arc;
-use axum::Router;
+use axum::{Router, http::Method};
+use tower_http::cors::{CorsLayer, Any};
 use std::net::{SocketAddr, IpAddr, Ipv4Addr};
 use routers::{
     hello::hello_router,
@@ -28,7 +29,13 @@ pub async fn api_start(db_connection: DbConn, registry: RegistryContract) {
     ));
     println!("listening on {}", addr);
     
-    let app = Router::new().nest("/", api_routes);
+    let cors = CorsLayer::new()
+        .allow_methods(vec![Method::POST, Method::GET])
+        .allow_origin(Any)
+        .allow_headers(Any);
+    let app = Router::new()
+        .nest("/", api_routes)
+        .layer(cors);
     axum::Server::bind(&addr)
         .serve(app.into_make_service())
         .await
