@@ -1,5 +1,6 @@
 use std::{sync::Arc, collections::HashSet};
 use entity::{credential, credential_instance};
+use shared::types::CredentialInstanceData;
 use sea_orm::{DbConn, EntityTrait, Set, QueryFilter, ColumnTrait, Condition, QuerySelect, FromQueryResult};
 use axum::{
     routing::{Router, get, post},
@@ -9,7 +10,7 @@ use axum::{
 use sha2::{Sha256, Digest};
 use base64ct::{Base64, Encoding};
 use serde::Deserialize;
-use serde_json::{to_string, from_str, Value};
+use serde_json::to_string;
 
 use crate::adapters::RegistryContract;
 
@@ -82,39 +83,28 @@ pub async fn modify_instances(
         match maybe_credential {
             Some(credential) => {
                 // Credential details are stringified JSON. Try parsing them as JSON Object
-                let cred_details: Result<Value, _> = from_str(&credential.details);
-                match cred_details {
-                    Ok(Value::Object(details)) => {
-                        // all credential instances inherit details from the "parent" credential
-                        // instances are distinguished by the nonce attribute. We add it later
-                        let mut shared_details = details;
-                        let mut new_instances: Vec<credential_instance::ActiveModel> = Vec::with_capacity(payload.num_to_add);
-                        for _i in 0..payload.num_to_add {
-                            // add unique random nonce to each copy to distinguish their hashes
-                            shared_details.insert(
-                                "nonce".to_string(),
-                                // save the nonce nunber in base64
-                                // shorter representation => faster parsing inside zkVM
-                                Value::from(Base64::encode_string(&rand::random::<u128>().to_ne_bytes()))
-                            );
-                            // add SchemaId
-                            shared_details.insert("schema_id".to_string(), credential.schema_id.into());
-                            // obtain a stringified JSON representation of the credential instance
-                            let details_str = to_string(&shared_details).unwrap();
-                            new_instances.push(credential_instance::ActiveModel {
-                                credential_id: Set(credential_id),
-                                data: Set(details_str.clone()),
-                                hash: Set(Base64::encode_string(&Sha256::digest(details_str))),
-                                ..Default::default()
-                            });
-                        }
-                        // insert new instances in DB
-                        credential_instance::Entity::insert_many(new_instances)
-                        .exec(&state.db_connection)
-                        .await.expect("failed to insert new credentials in DB");
-                    },
-                    _ => {},
+                let mut new_instances: Vec<credential_instance::ActiveModel> = Vec::with_capacity(payload.num_to_add);
+                for _i in 0..payload.num_to_add {
+                    let instance = CredentialInstanceData {
+                        details: credential.details.clone(),
+                        // save the nonce nunber in base64
+                        // shorter representation => faster parsing inside zkVM
+                        nonce: Base64::encode_string(&rand::random::<u128>().to_ne_bytes()),
+                        schema_id: credential.schema_id,
+                    };
+                    // obtain a stringified JSON representation of the credential instance
+                    let data_str = to_string(&instance).unwrap();
+                    new_instances.push(credential_instance::ActiveModel {
+                        credential_id: Set(credential_id),
+                        data: Set(data_str.clone()),
+                        hash: Set(Base64::encode_string(&Sha256::digest(data_str))),
+                        ..Default::default()
+                    });
                 }
+                // insert new instances in DB
+                credential_instance::Entity::insert_many(new_instances)
+                .exec(&state.db_connection)
+                .await.expect("failed to insert new credentials in DB");
             },
             None => {},
         }

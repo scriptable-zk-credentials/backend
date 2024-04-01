@@ -1,5 +1,5 @@
 use entity::credential;
-use sea_orm::{DbConn, EntityTrait, Set, QueryFilter, ColumnTrait, QuerySelect};
+use sea_orm::{DbConn, EntityTrait, Set, QueryFilter, ColumnTrait};
 use axum::{
     routing::{Router, post, get},
     http::StatusCode, Json,

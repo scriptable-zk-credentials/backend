@@ -1,6 +1,6 @@
-use std::{fs, path::Path};
+use std::path::Path;
 use near_jsonrpc_client::{methods, JsonRpcClient};
-use near_jsonrpc_primitives::types::{query::QueryResponseKind, chunks::ChunkReference};
+use near_jsonrpc_primitives::types::query::QueryResponseKind;
 use near_primitives::{
     types::{BlockReference, Finality, FunctionArgs, AccountId},
     views::{QueryRequest, FinalExecutionOutcomeView},

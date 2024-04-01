@@ -1,5 +1,5 @@
 use methods::{ZK_PROVER_ELF, ZK_PROVER_ID};
-use shared::types::{ZkCommit, ZkvmInput, ScriptLang};
+use shared::types::{ScriptLang, ZkCommit, ZkvmInput};
 use risc0_zkvm::{
     ExecutorEnv, default_prover,
     serde::to_vec,
@@ -46,6 +46,7 @@ pub struct ReadyProofResponse {
 
 #[derive(Deserialize, Clone)]
 pub struct GenProofArgs {
+    // Use stringified credential instance to get the same instance hash from within zkvm
     credentials: Vec<String>,
     lang: ScriptLang,
     script: String,

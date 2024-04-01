@@ -4,7 +4,7 @@ use axum::{
     http::StatusCode, Json,
     extract::State,
 };
-use serde::{Serialize, Deserialize};
+use serde::Deserialize;
 
 use crate::adapters::RegistryContract;
 

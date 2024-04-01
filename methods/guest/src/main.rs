@@ -5,7 +5,7 @@ use risc0_zkvm::{
     guest::env,
     sha::{self, Sha256},
 };
-use shared::types::{ZkCommit, ZkvmInput, ScriptLang, SchemaId};
+use shared::types::{ZkCommit, ZkvmInput, CredentialInstanceData, ScriptLang, SchemaId};
 use rhai::{Engine, Scope, Dynamic};
 //use boa_engine::{Context, Source};
 use serde_json::{Value, de::from_str};
@@ -14,40 +14,23 @@ use base64ct::{Base64, Encoding};
 risc0_zkvm::guest::entry!(main);
 
 pub fn main() {
-    // error flag
-    let mut has_error = false;
-
     let inputs: ZkvmInput = env::read();
-    // get credentials
-    let credentials: Vec<String> = inputs.credentials;
+    // get stringified credentials
+    let credentials_str: Vec<String> = inputs.credentials;
+
     // get script language
     let script_lang: ScriptLang = inputs.lang;
     // get script
     let input_script: String = inputs.script;
 
-    // 1) validate that credentials are JSON objects, and have some required attributes.
-    //      required attributes are: "schema_id"
-    // 2) extract SchemaId from each credential
-    // 4) delete attributes that aren't needed inside scripts, for faster parsing in scripting engines.
-    let mut cred_schemas: Vec<SchemaId> = Vec::with_capacity(credentials.len());
-    for cred in credentials.iter() {
-        let a = from_str::<Value>(cred);
-        match a {
-            Ok(Value::Object(cred_data)) => {
-                match cred_data.get("schema_id") {
-                    Some(Value::Number(cred_schema_id)) => {
-                        // it is safe to call unwrap() here as issuer logic only inserts u32 numbers
-                        cred_schemas.push(SchemaId::try_from(cred_schema_id.as_u64().unwrap()).unwrap());
-                    },
-                    _ => { has_error = true; break; },
-                };
-            },
-            _ => { has_error = true; break; },
-        }
-    }
+    // validate that credentials are JSON objects with correct structure
+    let credentials_res: Result<Vec<CredentialInstanceData>, _> = credentials_str
+        .iter()
+        .map(|cred_str| from_str(&cred_str))
+        .collect();
 
     // stop if we found any errors
-    if has_error {
+    if credentials_res.is_err() {
         env::commit(&ZkCommit {
             has_error: true,
             err_msg: "failed to parse credentials".to_string(),
@@ -61,8 +44,12 @@ pub fn main() {
         return;
     }
 
+    // safe to unwrap since we check earlier
+    let credentials = credentials_res.unwrap();
+    let cred_schemas = credentials.iter().map(|data| data.schema_id).collect();
+
     // calculate sha256 hash of each credential
-    let cred_hashes: Vec<String> = credentials
+    let cred_hashes: Vec<String> = credentials_str
         .iter()
         .map(|cred| Base64::encode_string(sha::Impl::hash_bytes(cred.as_bytes()).as_bytes()))
         .collect();
@@ -76,7 +63,7 @@ pub fn main() {
             // inject credentials in the script
             let rhai_creds: Dynamic = credentials
                 .iter()
-                .map(|cred_str| engine.parse_json(cred_str, true).unwrap())
+                .map(|cred_data| engine.parse_json(cred_data.details.clone(), true).unwrap())
                 .collect::<Vec<_>>()
                 .into();
             scope.push_constant_dynamic("credentials", rhai_creds);

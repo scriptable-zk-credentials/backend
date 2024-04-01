@@ -1,6 +1,5 @@
 mod wallet;
 
-use std::sync::Arc;
 use near_primitives::{
     types::AccountId,
     transaction::{Action::FunctionCall, FunctionCallAction},

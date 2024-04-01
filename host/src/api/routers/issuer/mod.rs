@@ -8,20 +8,10 @@ use holders::holders_router;
 use credentials::credentials_router;
 use credential_instances::instances_router;
 use schemas::schemas_router;
-use methods::{ZK_PROVER_ELF, ZK_PROVER_ID};
-use std::time::Instant;
 use sea_orm::DbConn;
-use axum::{
-    routing::{Router, post, get},
-    http::StatusCode, Json,
-};
-use risc0_zkvm::{
-    Receipt,
-    serde::from_slice,
-};
+use axum::routing::Router;
 use serde::{Serialize, Deserialize};
 use shared::types::ZkCommit;
-use base64ct::{Base64, Encoding};
 
 use crate::adapters::RegistryContract;
 
