@@ -5,10 +5,10 @@ use risc0_zkvm::{
     guest::env,
     sha::{self, Sha256},
 };
-use shared::types::{ZkCommit, ZkvmInput, CredentialInstanceData, ScriptLang, SchemaId};
+use shared::types::{ZkCommit, ZkvmInput, CredentialInstanceData, ScriptLang};
 use rhai::{Engine, Scope, Dynamic};
 //use boa_engine::{Context, Source};
-use serde_json::{Value, de::from_str};
+use serde_json::de::from_str;
 use base64ct::{Base64, Encoding};
 
 risc0_zkvm::guest::entry!(main);

@@ -16,12 +16,6 @@ use shared::types::ZkCommit;
 use crate::adapters::RegistryContract;
 
 
-#[derive(Deserialize)]
-pub struct CheckZkpArgs {
-    // Base64 ecncoded risc0 Receipt
-    base64_receipt: String,
-}
-
 #[derive(Serialize)]
 pub struct CheckZkpResponse {
     verdict: bool,
