@@ -75,7 +75,7 @@ pub fn verifier_router(db_connection: DbConn, registry: Arc<RegistryContract>) -
     Router::new()
         //.route("/check-script", post(gen_js_proof))
         .route("/check", post(check_presentation))
-        .route("/requests", get(get_requests).post(modify_requests))
+        .route("/presentations", get(get_presentations).post(modify_presentations))
         .with_state(app_state)
 }
 
@@ -172,7 +172,7 @@ pub async fn check_presentation(
 }
 
 // get pending requests
-pub async fn get_requests(State(state): State<AppState>) -> (StatusCode, Json<Vec<Request>>) {
+pub async fn get_presentations(State(state): State<AppState>) -> (StatusCode, Json<Vec<Request>>) {
     let requests = {
         let requests = state.requests.lock().expect("mutex was poisoned");
         requests.clone()
@@ -181,7 +181,7 @@ pub async fn get_requests(State(state): State<AppState>) -> (StatusCode, Json<Ve
     (StatusCode::ACCEPTED, Json(requests))
 }
 
-pub async fn modify_requests(
+pub async fn modify_presentations(
     State(state): State<AppState>,
     Json(payload): Json<ModifyRequestsArgs>,
 ) -> (StatusCode, Json<bool>) {
