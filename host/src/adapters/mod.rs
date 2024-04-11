@@ -16,7 +16,8 @@ impl RegistryContract {
     pub fn new() -> Self {
         let wallet = NearWallet::new();
         // read registry contract address from ENV file
-        let contract_addr = std::env::var("REGISTRY_CONTRACT_ADDRESS").expect("REGISTRY_CONTRACT_ADDRESS must be set.");
+        let near_env = std::env::var("NEAR_ENV").expect("NEAR_ENV must be set.").to_uppercase();
+        let contract_addr = std::env::var(&format!("VDR_ADDRESS_{}", &near_env)).expect(&format!("VDR_ADDRESS_{} must be set.", &near_env));
         
         Self { wallet, contract_address: contract_addr.parse().unwrap() }
     }
