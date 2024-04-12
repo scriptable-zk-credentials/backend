@@ -190,12 +190,16 @@ pub async fn modify_presentations(
         payload.approve
             .iter()
             .for_each(|&req_id| {
-                requests[req_id].status = RequestStatus::Approved;
+                if req_id < requests.len() {
+                    requests[req_id].status = RequestStatus::Approved;
+                }
             });
         payload.deny
             .iter()
             .for_each(|&req_id| {
-                requests[req_id].status = RequestStatus::Denied;
+                if req_id < requests.len() {
+                    requests[req_id].status = RequestStatus::Denied;
+                }
             });
 
     };
